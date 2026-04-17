@@ -2,11 +2,11 @@ desktop:
   screen: "1920x1080@60"
 
 member:
-  # needed for legacy API as there is no user management
+  # needed for legacy API ad there is no user management
   provider: "multiuser"
   multiuser:
-    admin_password: "admin"
-    user_password: "neko"
+   admin_password: "admin"
+   user_password: "neko"
 
 session:
   merciful_reconnect: true
@@ -15,11 +15,3 @@ session:
   cookie:
     # needed for legacy API
     enabled: false
-
-server:
-  # expose HTTP server on all interfaces (needed in containers/PaaS)
-  bind: "0.0.0.0:8080"
-  # serve built web client so the root URL does not return 404
-  static: "../client/dist"
-  # trust reverse-proxy headers (X-Forwarded-For/Proto)
-  proxy: true
