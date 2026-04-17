@@ -28,4 +28,4 @@ cmds = [
 ]
 
 [start]
-cmd = "cd server && NEKO_SERVER_BIND=0.0.0.0:8080 NEKO_SERVER_PROXY=true NEKO_SERVER_STATIC=../client/dist ./bin/neko serve -config=../config.yml"
+cmd = "cd server && ./bin/neko serve -config=../config.yml"
