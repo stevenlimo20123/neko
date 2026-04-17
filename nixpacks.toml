@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["go"]
+nixPkgs = ["go", "nodejs"]
 aptPkgs = [
   "curl",
   "build-essential",
@@ -17,11 +17,15 @@ aptPkgs = [
 [phases.install]
 cmds = [
   "if [ ! -x /usr/local/go/bin/go ]; then curl -fsSL https://go.dev/dl/go1.25.1.linux-amd64.tar.gz | tar -C /usr/local -xz; fi",
-  "cd server && /usr/local/go/bin/go mod download"
+  "cd server && /usr/local/go/bin/go mod download",
+  "cd client && npm ci"
 ]
 
 [phases.build]
-cmds = ["cd server && PATH=/usr/local/go/bin:$PATH CGO_ENABLED=1 ./build core"]
+cmds = [
+  "cd server && PATH=/usr/local/go/bin:$PATH CGO_ENABLED=1 ./build core",
+  "cd client && npm run build"
+]
 
 [start]
-cmd = "cd server && ./bin/neko serve"
+cmd = "cd server && NEKO_SERVER_BIND=0.0.0.0:8080 NEKO_SERVER_PROXY=true NEKO_SERVER_STATIC=../client/dist ./bin/neko serve -config=../config.yml"
