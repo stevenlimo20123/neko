@@ -1,5 +1,7 @@
 [phases.setup]
 aptPkgs = [
+  "curl",
+  "build-essential",
   "ca-certificates",
   "pkg-config",
   "libx11-dev",
@@ -12,10 +14,13 @@ aptPkgs = [
 ]
 
 [phases.install]
-cmds = ["cd server && go mod download"]
+cmds = [
+  "if [ ! -x /usr/local/go/bin/go ]; then curl -fsSL https://go.dev/dl/go1.25.1.linux-amd64.tar.gz | tar -C /usr/local -xz; fi",
+  "cd server && /usr/local/go/bin/go mod download"
+]
 
 [phases.build]
-cmds = ["cd server && ./build core"]
+cmds = ["cd server && PATH=/usr/local/go/bin:$PATH CGO_ENABLED=1 ./build core"]
 
 [start]
 cmd = "cd server && ./bin/neko serve"
