@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["go_1_25"]
+nixPkgs = ["go"]
 aptPkgs = [
   "ca-certificates",
   "pkg-config",
