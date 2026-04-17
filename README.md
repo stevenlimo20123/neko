@@ -152,16 +152,6 @@ For neko room management software, visit [neko-rooms](https://github.com/m1k1o/n
 
 It also offers [Zero-knowledge installation (with HTTPS)](https://github.com/m1k1o/neko-rooms/?tab=readme-ov-file#zero-knowledge-installation-with-https).
 
-## Deployment note (avoid `404 page not found`)
-
-If you deploy from source (for example using Nixpacks), make sure the web client assets are built and served by the server. This repository is configured to do that via `config.yml`:
-
-- `server.bind: 0.0.0.0:8080`
-- `server.static: ../client/dist`
-- `server.proxy: true`
-
-If your platform supports Docker image mode, using the root `Dockerfile` is the easiest option because it starts from the official `ghcr.io/m1k1o/neko/firefox:latest` image with browser runtime already included.
-
 ## Documentation
 
 Full documentation is available at [neko.m1k1o.net](https://neko.m1k1o.net/). Key sections include:
