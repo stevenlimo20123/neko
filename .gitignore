@@ -44,4 +44,5 @@ runtime/fonts/*
 runtime/icon-theme/*
 !runtime/icon-theme/.gitkeep
 
-# root Dockerfile is kept for Dokploy/Docker build deployments
+# root Dockerfile is generated from the Dockerfile.tmpl
+/Dockerfile
