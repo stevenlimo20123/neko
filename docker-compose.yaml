@@ -12,8 +12,6 @@ services:
       NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: admin
       NEKO_WEBRTC_EPR: 52000-52100
       NEKO_WEBRTC_ICELITE: 1
-      # See: https://neko.m1k1o.net/docs/v3/configuration/webrtc#ip
-      # NEKO_NAT1TO1: <IP_ADDRESS>
       
       # IMPORTANT: set this to your server PUBLIC IP if auto-detect is wrong
       # (use your real value, no brackets)
