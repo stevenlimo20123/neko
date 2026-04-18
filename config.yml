@@ -15,3 +15,11 @@ session:
   cookie:
     # needed for legacy API
     enabled: false
+
+server:
+  # expose HTTP server on all interfaces (needed in containers/PaaS)
+  bind: "0.0.0.0:8080"
+  # serve built web client so the root URL does not return 404
+  static: "../client/dist"
+  # trust reverse-proxy headers (X-Forwarded-For/Proto)
+  proxy: true
