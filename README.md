@@ -171,3 +171,13 @@ Contributions are welcome! Check the [Contributing Guide](https://neko.m1k1o.net
 ## Support
 
 If you find Neko useful, consider supporting the project via [GitHub Sponsors](https://github.com/sponsors/m1k1o).
+
+## Automation Service
+
+This fork ships a built-in browser-automation platform (see
+[`automation/`](automation/README.md)): a FastAPI service inside the Neko
+container that exposes the live Firefox's tabs, detects and reuses the
+user's authenticated sessions for any website, runs Playwright-based
+scraping with automatic cookie injection, captures network/XHR responses,
+and manages resumable scraping jobs. Deploy with
+`docker-compose.automation.yaml` and `NEKO_AUTOMATION_TOKEN`.
