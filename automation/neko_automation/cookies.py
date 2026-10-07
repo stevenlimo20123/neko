@@ -60,13 +60,16 @@ def read_cookies(domain: Optional[str] = None,
                 continue
         if names is not None and name not in names:
             continue
+        exp_raw = int(expiry) if expiry else 0
+        # Firefox >= ~122 stores expiry in milliseconds
+        exp_ms = exp_raw if exp_raw > 10 ** 12 else exp_raw * 1000
         out.append({
             "host": host, "name": name, "value": value,
             "path": path or "/",
-            "expiry": int(expiry) if expiry else 0,
-            "expiry_ms": int(expiry) * 1000 if expiry else 0,
+            "expiry": exp_raw,
+            "expiry_ms": exp_ms,
             "secure": bool(secure), "httpOnly": bool(http_only),
-            "expired": bool(expiry) and expiry < now,
+            "expired": bool(exp_raw) and exp_ms < now * 1000,
         })
     return out
 
@@ -87,14 +90,17 @@ def cookie_summary(domain: Optional[str] = None) -> dict:
 
 def to_playwright(cookies: List[dict]) -> List[dict]:
     """Convert our cookie dicts to Playwright's add_cookies format
-    (proven conversion from the Pinduoduo scraping pipeline)."""
+    (proven conversion from the Pinduoduo scraping pipeline; Firefox >= ~122
+    stores moz_cookies.expiry in MILLISECONDS, Playwright wants seconds)."""
     out = []
     for c in cookies:
         if c.get("expired"):
             continue
         exp = int(c.get("expiry") or 0)
+        if exp > 10 ** 12:          # milliseconds -> seconds
+            exp = exp // 1000
         if exp <= 0:
-            exp = -1
+            exp = -1                 # session cookie
         cookie = {
             "name": c["name"], "value": c["value"], "expires": exp,
             "httpOnly": bool(c.get("httpOnly")),
