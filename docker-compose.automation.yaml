@@ -1,0 +1,35 @@
+# Neko + Automation Service - reference compose
+#
+# Differences from the plain neko compose:
+#   * image: the automation-enabled build (GHCR, built by
+#     .github/workflows/automation-image.yml)
+#   * volumes: the Firefox profile and automation state survive
+#     redeploys (logins are kept)
+#   * NEKO_AUTOMATION_TOKEN: bearer token for the automation API -
+#     set it as an environment variable / Dokploy secret, never commit it
+services:
+  neko:
+    image: "ghcr.io/stevenlimo20123/neko-automation:latest"
+    restart: "unless-stopped"
+    shm_size: "2gb"
+    ports:
+      - "8080:8080"
+      - "52000-52100:52000-52100/udp"
+    environment:
+      NEKO_DESKTOP_SCREEN: 1920x1080@30
+      NEKO_MEMBER_MULTIUSER_USER_PASSWORD: neko123
+      NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${NEKO_ADMIN_PASSWORD:?set me}
+      NEKO_WEBRTC_EPR: 52000-52100
+      NEKO_WEBRTC_ICELITE: "1"
+      # Automation API auth (required - generate e.g. with: openssl rand -hex 24)
+      NEKO_AUTOMATION_TOKEN: ${NEKO_AUTOMATION_TOKEN:?set me}
+      # optional extras:
+      # NEKO_AUTOMATION_ALLOW_COOKIE_EXPORT: "false"   # default off
+      # NEKO_AUTOMATION_PREFIX: "/automation"          # if routed under a path
+    volumes:
+      - neko-profile:/home/neko/.mozilla
+      - neko-automation-state:/var/lib/neko-automation
+
+volumes:
+  neko-profile:
+  neko-automation-state:
