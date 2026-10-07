@@ -23,11 +23,15 @@ RUN set -eux; \
 
 # automation service dependencies + headless chromium
 # (--ignore-installed: Debian's pip cannot uninstall apt-managed packages)
+# PLAYWRIGHT_BROWSERS_PATH: install browsers to a shared location so the
+# service (running as user neko) can use them, not just root's cache)
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 COPY automation/requirements.txt /tmp/automation-requirements.txt
 RUN set -eux; \
     pip3 install --break-system-packages --no-cache-dir --ignore-installed \
         -r /tmp/automation-requirements.txt; \
     python3 -m playwright install --with-deps chromium; \
+    chmod -R a+rX /opt/ms-playwright; \
     rm -f /tmp/automation-requirements.txt
 
 # automation service code
