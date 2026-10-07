@@ -354,3 +354,32 @@ NEKO_AUTOMATION_STATE_DIR=/tmp/na NEKO_AUTOMATION_TOKEN=t \
 
 The service degrades gracefully without Firefox/BiDi (tabs fall back to
 sessionstore, contexts still work).
+
+## Profile seeding (migration & disaster recovery)
+
+When moving an existing Neko container to volume-backed persistence (or
+rebuilding after a volume loss), set these one-time variables on the
+service:
+
+```
+NEKO_AUTOMATION_PROFILE_SEED_URL=<https url of a .tar.gz of firefox/ profile>
+NEKO_AUTOMATION_PROFILE_SEED_TOKEN=<bearer token if the URL needs auth>
+```
+
+On startup, before Firefox launches, the seeder extracts the archive into
+the profile root **only if** no cookies database exists yet (idempotent,
+marker-file guarded, path-traversal filtered). Remove the variables after
+the first successful boot.
+
+Migration checklist for an existing container whose profile lives in the
+container layer:
+
+1. While the old container is running, snapshot the profile:
+   `tar czf profile.tar.gz --exclude=cache2 -C /home/neko/.mozilla firefox`
+   and host it somewhere the new container can fetch it (auth-protected).
+2. Switch the compose to the automation image with volumes:
+   `neko-profile:/home/neko/.mozilla` and
+   `neko-automation-state:/var/lib/neko-automation`.
+3. Set the two SEED variables above, deploy once, verify cookies arrived
+   (`/api/automation/session/status?domain=...`), then remove the SEED
+   variables and redeploy.
