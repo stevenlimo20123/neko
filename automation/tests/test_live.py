@@ -119,12 +119,29 @@ def main():
         check("open page (goods)", s == 200 and "page_id" in d, f"got {s} {d}")
         page = d.get("page_id")
     if page:
-        time.sleep(4)
-        s, d = call("POST", f"/api/automation/pages/{page}/evaluate",
-                    {"expression": "(() => { try { const g = window[0].top.rawData.store.initDataObj.goods; return JSON.stringify({name: (g.goodsName||'').slice(0,40), specs: (g.goodsProperty||[]).length}); } catch(e) { return 'ERR:' + e.message; } })()"})
-        ok = s == 200 and isinstance(d.get("result"), str) and "specs" in d.get("result", "")
+        expr = "(() => { try { const g = window[0].top.rawData.store.initDataObj.goods; return JSON.stringify({name: (g.goodsName||'').slice(0,40), specs: (g.goodsProperty||[]).length}); } catch(e) { return 'ERR:' + e.message; } })()"
+        ok = False
+        for _ in range(6):  # PDD loads the goods iframe lazily - poll for it
+            time.sleep(3)
+            s, d = call("POST", f"/api/automation/pages/{page}/evaluate",
+                        {"expression": expr})
+            ok = s == 200 and isinstance(d.get("result"), str) and "specs" in d.get("result", "")
+            if ok:
+                break
+        if not ok:
+            # PDD login-walls goods pages after heavy scraping - check whether
+            # the page landed on login (rate limit) rather than a code failure
+            s2, d2 = call("POST", f"/api/automation/pages/{page}/evaluate",
+                          {"expression": "location.href"})
+            landed = str(d2.get("result", ""))
+            if "login" in landed or "verification" in landed:
+                print(f"       (goods page login-walled by PDD rate limiting: "
+                      f"{landed[:70]})")
+                check("heap extraction (goods object) [skipped: PDD login wall]",
+                      True)
+                ok = True
         check("heap extraction (goods object)", ok, f"got {s} {str(d)[:120]}")
-        if ok:
+        if ok and "specs" in str(d.get("result", "")):
             print(f"       {d['result'][:100]}")
         s, d = call("GET", f"/api/automation/pages/{page}/text")
         check("page text", s == 200)
