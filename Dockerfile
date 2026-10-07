@@ -13,18 +13,19 @@ FROM ghcr.io/m1k1o/neko/firefox:latest
 
 USER root
 
-# python + pip + build deps for lz4
+# python + pip
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-lz4; \
+        python3 python3-pip; \
     apt-get clean -y; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # automation service dependencies + headless chromium
+# (--ignore-installed: Debian's pip cannot uninstall apt-managed packages)
 COPY automation/requirements.txt /tmp/automation-requirements.txt
 RUN set -eux; \
-    pip3 install --break-system-packages --no-cache-dir \
+    pip3 install --break-system-packages --no-cache-dir --ignore-installed \
         -r /tmp/automation-requirements.txt; \
     python3 -m playwright install --with-deps chromium; \
     rm -f /tmp/automation-requirements.txt
