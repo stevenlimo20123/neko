@@ -7,6 +7,7 @@ render pages that require JavaScript. The automation therefore shares the
 user's logged-in sessions WITHOUT touching the visible browser.
 """
 import asyncio
+import base64
 import logging
 import time
 import uuid
@@ -128,8 +129,10 @@ class ManagedPage:
         return {"url": self.page.url}
 
     async def screenshot(self, full_page: bool = False) -> str:
+        """Screenshot as base64 PNG string (Playwright returns raw bytes)."""
         await self.touch()
-        return await self.page.screenshot(full_page=full_page, type="png")
+        data = await self.page.screenshot(full_page=full_page, type="png")
+        return base64.b64encode(data).decode()
 
     async def close(self):
         try:
