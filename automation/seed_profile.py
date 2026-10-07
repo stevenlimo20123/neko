@@ -49,20 +49,43 @@ def default_profile_dir():
 
 
 def safe_members(tf):
+    """Accept only firefox/... regular files; strip the leading firefox/ so
+    members land directly inside PROFILE_ROOT (e.g. profiles.ini,
+    profile.default/cookies.sqlite)."""
     out = []
     for m in tf.getmembers():
         name = m.name.lstrip("./")
         if name.startswith("/") or ".." in name.split("/"):
             log(f"skipping unsafe member {m.name}")
             continue
-        if not (name == "firefox" or name.startswith("firefox/")):
+        if not name.startswith("firefox/"):
             log(f"skipping member outside firefox/: {m.name}")
             continue
         if m.issym() or m.islnk() or m.isdev():
-            log(f"skipping link/device member {m.name}")
+            continue  # lock/.parentlock symlinks etc.
+        # strip the leading "firefox/" component
+        m.name = name[len("firefox/"):]
+        if not m.name or m.name.endswith("/"):
             continue
         out.append(m)
     return out
+
+
+def _has_real_cookies(path):
+    """True when cookies.sqlite exists and contains at least one cookie
+    (a fresh Firefox profile ships an empty schema, size > 0 but no rows)."""
+    if not os.path.exists(path) or os.path.getsize(path) <= 0:
+        return False
+    try:
+        import sqlite3
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+        try:
+            n = con.execute("SELECT count(*) FROM moz_cookies").fetchone()[0]
+        finally:
+            con.close()
+        return n > 0
+    except Exception:
+        return True  # cannot read - assume it is real, never overwrite
 
 
 def main():
@@ -70,8 +93,8 @@ def main():
         return
     profile = default_profile_dir()
     cookies = os.path.join(profile, "cookies.sqlite")
-    if os.path.exists(cookies) and os.path.getsize(cookies) > 0:
-        log("profile already has cookies.sqlite - skipping seed")
+    if _has_real_cookies(cookies):
+        log("profile already has cookies - skipping seed")
         return
     if os.path.exists(os.path.join(profile, MARKER)):
         log("seed marker present - skipping")
@@ -98,13 +121,20 @@ def main():
         if magic != b"\x1f\x8b":
             log("download is not gzip - ignoring")
             return
-        os.makedirs(os.path.dirname(profile), exist_ok=True)
+        os.makedirs(profile, exist_ok=True)
         with tarfile.open(tmp_path, "r:gz") as tf:
             members = safe_members(tf)
             log(f"extracting {len(members)} members to {PROFILE_ROOT}")
             tf.extractall(PROFILE_ROOT, members=members)
+        os.makedirs(profile, exist_ok=True)
         with open(os.path.join(profile, MARKER), "w") as f:
             f.write("seeded\n")
+        # remove a misplaced nested firefox/ tree left by a buggy seed
+        misplaced = os.path.join(PROFILE_ROOT, "firefox")
+        if os.path.isdir(misplaced):
+            import shutil
+            shutil.rmtree(misplaced, ignore_errors=True)
+            log("removed misplaced nested firefox/ tree")
         log("seed complete")
     except Exception as e:
         log(f"extract failed (ignoring): {e}")
