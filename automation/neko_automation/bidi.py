@@ -204,9 +204,32 @@ class BidiClient:
                               {"context": context, "ignoreCache": ignore_cache})
 
     async def capture_screenshot(self, context: str) -> str:
-        r = await self.cmd("browsingContext.captureScreenshot",
-                           {"context": context, "format": "image/png"})
-        return r.get("data", "")
+        """browsingContext.captureScreenshot with parameter fallbacks.
+
+        Firefox 157 has been observed rejecting some parameter
+        combinations, so we retry with progressively simpler payloads and
+        log the exact errors for diagnostics."""
+        attempts = [
+            {"context": context, "format": "image/png", "origin": "viewport"},
+            {"context": context, "format": "image/png"},
+            {"context": context},
+        ]
+        last_err = None
+        for params in attempts:
+            try:
+                r = await self.cmd("browsingContext.captureScreenshot", params,
+                                   timeout=45)
+                data = r.get("data", "")
+                if data:
+                    return data
+                last_err = "empty data"
+            except BidiError as e:
+                last_err = f"{e.error}: {e.message[:120]}"
+                log.warning("captureScreenshot failed (%s): %s",
+                            params, last_err)
+        if last_err:
+            raise BidiError("capture failed", last_err)
+        return ""
 
     async def evaluate(self, context: str, expression: str,
                        await_promise: bool = False, timeout: float = 60) -> Any:

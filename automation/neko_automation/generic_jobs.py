@@ -228,13 +228,9 @@ async def _extract_items(page, extract_expr, body):
     """Evaluate extract_response with `body` bound to the parsed response."""
     if extract_expr in ("body", "", None):
         return body if isinstance(body, list) else [body]
-    wrapped = ("(function() { const body = arguments[0]; const r = arguments[1];"
-               " return (%s); })") % extract_expr
-    # evaluate with body via a JSON round-trip
-    js = ("(body => { const r = body; return (%s); })" % extract_expr)
-    return await page.evaluate(js, body) if False else \
-        await page.evaluate(
-            "body => { const r = body; return (%s); }" % extract_expr, body)
+    js = "body => { const r = body; return (%s); }" % extract_expr
+    # NOTE: evaluate on the RAW playwright page so the body argument is passed
+    return await page.page.evaluate(js, body)
 
 
 def _dedup_key(rec: dict, expr: str) -> str:

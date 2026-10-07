@@ -5,10 +5,9 @@ Run after deployment: python3 test_live.py <base-url> <token>
 """
 import base64
 import json
+import subprocess
 import sys
 import time
-import urllib.request
-import urllib.error
 
 BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "https://neko.tingsrepo.com/automation"
 TOKEN = sys.argv[2] if len(sys.argv) > 2 else open("/tmp/automation_token.txt").read().strip()
@@ -17,21 +16,25 @@ PASS, FAIL = [], []
 
 
 def call(method, path, body=None, expect=200, auth=True, timeout=90):
+    """HTTP via curl (Cloudflare's bot filter bans some python TLS
+    fingerprints; curl's passes)."""
     url = f"{BASE}{path}"
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method,
-                                 headers={"Content-Type": "application/json",
-                                          "User-Agent": "neko-automation-test"})
+    cmd = ["curl", "-s", "--max-time", str(timeout), "-X", method,
+           "-H", "Content-Type: application/json",
+           "-w", "\n%{http_code}"]
     if auth:
-        req.add_header("Authorization", f"Bearer {TOKEN}")
+        cmd += ["-H", f"Authorization: Bearer {TOKEN}"]
+    if body is not None:
+        cmd += ["-d", json.dumps(body)]
+    cmd.append(url)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 15)
+    out = r.stdout.rsplit("\n", 1)
+    code = int(out[1]) if len(out) == 2 and out[1].isdigit() else -1
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            txt = r.read()
-            return r.status, json.loads(txt) if txt else {}
-    except urllib.error.HTTPError as e:
-        return e.code, {}
-    except Exception as e:
-        return -1, {"error": str(e)}
+        data = json.loads(out[0]) if out[0] else {}
+    except json.JSONDecodeError:
+        data = {"raw": out[0][:200]}
+    return code, data
 
 
 def check(name, cond, detail=""):
@@ -111,7 +114,7 @@ def main():
     ctx = d.get("context_id")
     page = None
     if ctx:
-        s, d = call("POST", f"/api/automation/context/{ctx}/pages",
+        s, d = call("POST", f"/api/automation/contexts/{ctx}/pages",
                     {"url": "https://mobile.yangkeduo.com/goods.html?goods_id=799108744880"})
         check("open page (goods)", s == 200 and "page_id" in d, f"got {s} {d}")
         page = d.get("page_id")
@@ -130,7 +133,7 @@ def main():
 
     print("[6] network capture")
     if ctx:
-        s, d = call("POST", f"/api/automation/context/{ctx}/pages",
+        s, d = call("POST", f"/api/automation/contexts/{ctx}/pages",
                     {"url": "https://mobile.yangkeduo.com/search_result.html?search_key=%E5%8F%91%E7%94%B5%E6%9C%BA"})
         npage = d.get("page_id")
         if npage:

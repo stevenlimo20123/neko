@@ -250,6 +250,10 @@ class ContextIn(BaseModel):
     timezone_id: str = "Asia/Shanghai"
 
 
+class NewPageIn(BaseModel):
+    url: Optional[str] = None
+
+
 @r.post("/api/automation/context")
 async def create_context(body: ContextIn):
     AUDIT.log("context.create", domain=body.domain,
@@ -264,7 +268,7 @@ async def create_context(body: ContextIn):
     except Exception as e:
         raise HTTPException(502, f"context creation failed: {e}")
     return {"context_id": ctx_id,
-            "hint": f"POST /api/automation/context/{ctx_id}/pages to open a page"}
+            "hint": f"POST /api/automation/contexts/{ctx_id}/pages to open a page"}
 
 
 @r.get("/api/automation/contexts")
@@ -279,7 +283,8 @@ async def close_context(ctx_id: str):
 
 
 @r.post("/api/automation/contexts/{ctx_id}/pages")
-async def new_page(ctx_id: str, url: Optional[str] = None):
+async def new_page(ctx_id: str, body: NewPageIn = None):
+    url = body.url if body else None
     try:
         page = await CONTEXTS.new_page(ctx_id, url=url)
     except KeyError as e:
